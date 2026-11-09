@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment variables (never commit secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Testing & coverage
+coverage/
+
+# Vercel
+.vercel/
+
+# Material de referencia de clase (solo uso local)
+reference/
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Otros
+/docs/consigna.pdf
+/docs/rubrica.md
+AGENTS.md
+
+#Por ahora
+/docs/bitacora-ia.md

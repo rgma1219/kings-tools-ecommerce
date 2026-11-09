@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* Habilita el modo oscuro basado en la clase .dark en el elemento raíz (html) en Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
