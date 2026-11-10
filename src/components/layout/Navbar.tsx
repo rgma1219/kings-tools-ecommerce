@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/auth/useAuth';
+import { useCart } from '../../contexts/cart/useCart';
 import { useTheme } from '../../contexts/theme/useTheme';
 import { ROUTES } from '../../routes/routes';
 import { Button } from '../ui/Button';
@@ -8,6 +9,7 @@ import { Button } from '../ui/Button';
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { user, isAdmin, logout, loading } = useAuth();
+  const { totalItems } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -45,7 +47,14 @@ export function Navbar() {
             Catálogo
           </NavLink>
           <NavLink to={ROUTES.CART} className={navLinkClass}>
-            Carrito
+            <span className="inline-flex items-center gap-1.5">
+              Carrito
+              {totalItems > 0 && (
+                <span className="rounded-full bg-yellow-500 px-2 py-0.5 text-xs font-bold text-zinc-950">
+                  {totalItems}
+                </span>
+              )}
+            </span>
           </NavLink>
           {user && (
             <NavLink to={ROUTES.ORDERS} className={navLinkClass}>
@@ -123,7 +132,7 @@ export function Navbar() {
               className={navLinkClass}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Carrito
+              Carrito {totalItems > 0 ? `(${totalItems})` : ''}
             </NavLink>
             {user && (
               <NavLink

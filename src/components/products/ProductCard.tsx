@@ -8,15 +8,21 @@ import { Button } from '../ui/Button';
 
 interface ProductCardProps {
   product: Product;
+  quantityInCart?: number;
   onAdd?: (product: Product) => void;
 }
 
-export function ProductCard({ product, onAdd }: ProductCardProps) {
+export function ProductCard({
+  product,
+  quantityInCart = 0,
+  onAdd,
+}: ProductCardProps) {
   const categoryLabel =
     PRODUCT_CATEGORIES.find((c) => c.id === product.categoryId)?.label ??
     product.categoryId;
 
   const hasStock = product.stock > 0;
+  const reachedStockLimit = quantityInCart >= product.stock;
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700">
@@ -37,6 +43,11 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
         <span className="absolute top-3 left-3 rounded-md bg-zinc-900/80 px-2.5 py-1 text-[11px] font-medium text-zinc-100 backdrop-blur-xs">
           {categoryLabel}
         </span>
+        {quantityInCart > 0 && (
+          <span className="absolute top-3 right-3 rounded-md bg-yellow-500 px-2 py-0.5 text-[11px] font-bold text-zinc-950">
+            En carrito: {quantityInCart}
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
@@ -76,14 +87,17 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
             variant="primary"
             size="sm"
             fullWidth
-            disabled={!hasStock}
+            disabled={!hasStock || reachedStockLimit}
             onClick={() => onAdd?.(product)}
           >
-            + Agregar
+            {!hasStock
+              ? 'Sin stock'
+              : reachedStockLimit
+                ? 'Máx. stock'
+                : '+ Agregar'}
           </Button>
         </div>
       </div>
     </article>
   );
 }
-

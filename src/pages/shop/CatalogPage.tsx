@@ -4,6 +4,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Spinner } from '../../components/ui/Spinner';
+import { useCart } from '../../contexts/cart/useCart';
 import { useProducts } from '../../contexts/products/useProducts';
 
 export function CatalogPage() {
@@ -20,6 +21,8 @@ export function CatalogPage() {
     resetFilters,
     loadProducts,
   } = useProducts();
+
+  const { addToCart, getItemQuantity } = useCart();
 
   return (
     <section className="space-y-6">
@@ -58,7 +61,12 @@ export function CatalogPage() {
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                quantityInCart={getItemQuantity(product.id)}
+                onAdd={addToCart}
+              />
             ))}
           </div>
 

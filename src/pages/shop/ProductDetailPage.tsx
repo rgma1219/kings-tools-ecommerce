@@ -4,6 +4,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Spinner } from '../../components/ui/Spinner';
+import { useCart } from '../../contexts/cart/useCart';
 import { ROUTES } from '../../routes/routes';
 import { getProductById } from '../../services/products.service';
 import {
@@ -13,9 +14,12 @@ import {
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { addToCart, getItemQuantity } = useCart();
+
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [quantityToAdd, setQuantityToAdd] = useState<number>(1);
 
   useEffect(() => {
     if (!id) {
@@ -31,6 +35,7 @@ export function ProductDetailPage() {
       .then((result) => {
         if (!cancelled) {
           setProduct(result);
+          setQuantityToAdd(1);
         }
       })
       .catch((err: unknown) => {
@@ -85,7 +90,17 @@ export function ProductDetailPage() {
   const categoryLabel =
     PRODUCT_CATEGORIES.find((c) => c.id === product.categoryId)?.label ??
     product.categoryId;
+  const inCartQty = getItemQuantity(product.id);
+  const remainingStock = Math.max(0, product.stock - inCartQty);
   const hasStock = product.stock > 0;
+
+  const handleAdd = () => {
+    if (remainingStock <= 0) {
+      return;
+    }
+    addToCart(product, Math.min(quantityToAdd, remainingStock));
+    setQuantityToAdd(1);
+  };
 
   return (
     <div className="space-y-6">
@@ -134,32 +149,91 @@ export function ProductDetailPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium text-zinc-500 dark:text-zinc-400">
-                Disponibilidad:
-              </span>
-              <span
-                className={`font-semibold ${
-                  hasStock
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}
-              >
-                {hasStock
-                  ? `${product.stock} unidades disponibles`
-                  : 'Agotado temporalmente'}
-              </span>
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div>
+                <span className="font-medium text-zinc-500 dark:text-zinc-400">
+                  Stock total:{' '}
+                </span>
+                <span
+                  className={`font-semibold ${
+                    hasStock
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {hasStock
+                    ? `${product.stock} unidades`
+                    : 'Agotado temporalmente'}
+                </span>
+              </div>
+
+              {inCartQty > 0 && (
+                <span className="rounded-md bg-yellow-500/15 px-2.5 py-1 text-xs font-semibold text-yellow-700 dark:text-yellow-400">
+                  Ya tenés {inCartQty} en tu carrito
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="pt-2">
-            <Button variant="primary" size="lg" fullWidth disabled={!hasStock}>
-              {hasStock ? 'Agregar al carrito' : 'Sin stock disponible'}
-            </Button>
+          <div className="space-y-3 pt-2">
+            {remainingStock > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Cantidad:
+                </span>
+                <div className="inline-flex items-center rounded-lg border border-zinc-300 dark:border-zinc-700">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuantityToAdd((prev) => Math.max(1, prev - 1))
+                    }
+                    className="cursor-pointer px-3 py-1.5 text-sm font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    -
+                  </button>
+                  <span className="min-w-10 text-center text-sm font-semibold">
+                    {quantityToAdd}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setQuantityToAdd((prev) =>
+                        Math.min(remainingStock, prev + 1)
+                      )
+                    }
+                    className="cursor-pointer px-3 py-1.5 text-sm font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={remainingStock <= 0}
+                onClick={handleAdd}
+              >
+                {!hasStock
+                  ? 'Sin stock disponible'
+                  : remainingStock <= 0
+                    ? 'Alcanzaste el stock máximo'
+                    : 'Agregar al carrito'}
+              </Button>
+              {inCartQty > 0 && (
+                <Link to={ROUTES.CART} className="sm:w-48">
+                  <Button variant="secondary" size="lg" fullWidth>
+                    Ver carrito ({inCartQty})
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </article>
     </div>
   );
 }
-
