@@ -24,9 +24,6 @@ export function AdminLayout() {
               src="/images/logo.png"
               alt="King's Tools Admin"
               className="h-9 w-9 rounded object-contain"
-              onError={(e) => {
-                e.currentTarget.src = '/images/product-placeholder.svg';
-              }}
             />
             <div>
               <div className="flex items-center gap-2">

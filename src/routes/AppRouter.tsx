@@ -9,6 +9,7 @@ import { UserOrdersPage } from '../pages/orders/UserOrdersPage';
 import { CartPage } from '../pages/shop/CartPage';
 import { CatalogPage } from '../pages/shop/CatalogPage';
 import { CheckoutPage } from '../pages/shop/CheckoutPage';
+import { ProductDetailPage } from '../pages/shop/ProductDetailPage';
 import { AdminRoute } from './AdminRoute';
 import { ProtectedRoute } from './ProtectedRoute';
 import { ROUTES } from './routes';
@@ -19,6 +20,10 @@ export function AppRouter() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route path={ROUTES.HOME} element={<CatalogPage />} />
+          <Route
+            path={ROUTES.PRODUCT_DETAIL}
+            element={<ProductDetailPage />}
+          />
           <Route path={ROUTES.CART} element={<CartPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.REGISTER} element={<RegisterPage />} />

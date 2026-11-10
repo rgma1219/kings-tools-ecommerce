@@ -29,9 +29,6 @@ export function Navbar() {
             src="/images/logo.png"
             alt="King's Tools Logo"
             className="h-10 w-10 rounded object-contain"
-            onError={(e) => {
-              e.currentTarget.src = '/images/product-placeholder.svg';
-            }}
           />
           <div>
             <span className="block text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">

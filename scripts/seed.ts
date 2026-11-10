@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { initializeApp } from 'firebase/app';
 import {
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   getFirestore,
   serverTimestamp,
   setDoc,
@@ -28,7 +30,8 @@ if (!firebaseConfig.projectId) {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const PLACEHOLDER_IMAGE = '/images/product-placeholder.svg';
+const PLACEHOLDER_IMAGE =
+  'https://i.ibb.co/G4ttxzN3/kingstools-imagen-producto.png';
 
 interface SeedItem {
   name: string;
@@ -533,10 +536,22 @@ const CATALOG_SEED: SeedItem[] = [
 ];
 
 async function seedProducts() {
+  const productsCol = collection(db, 'products');
+  const existingSnapshot = await getDocs(productsCol);
+
+  if (!existingSnapshot.empty) {
+    console.log(
+      `Limpiando ${existingSnapshot.size} productos previos antes de sembrar...`
+    );
+    for (const existingDoc of existingSnapshot.docs) {
+      await deleteDoc(existingDoc.ref);
+    }
+  }
+
   console.log(`Sembrando ${CATALOG_SEED.length} productos en King's Tools...\n`);
 
   for (const item of CATALOG_SEED) {
-    const productRef = doc(collection(db, 'products'));
+    const productRef = doc(productsCol);
 
     await setDoc(productRef, {
       name: item.name,
