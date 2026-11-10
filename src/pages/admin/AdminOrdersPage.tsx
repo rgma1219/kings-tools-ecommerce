@@ -9,7 +9,11 @@ import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Spinner } from '../../components/ui/Spinner';
 import { getOrderDetailPath } from '../../routes/routes';
-import { getAllOrders, updateOrderStatus } from '../../services/orders.service';
+import {
+  ALLOWED_ORDER_TRANSITIONS,
+  getAllOrders,
+  updateOrderStatus,
+} from '../../services/orders.service';
 import type { Order, OrderStatus } from '../../types/order.types';
 
 const STATUS_OPTIONS: OrderStatus[] = [
@@ -50,14 +54,19 @@ export function AdminOrdersPage() {
 
   const handleStatusChange = async (
     orderId: string,
+    currentStatus: OrderStatus,
     newStatus: OrderStatus
   ) => {
+    if (currentStatus === newStatus) {
+      return;
+    }
+
     setUpdatingOrderId(orderId);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      await updateOrderStatus(orderId, newStatus);
+      await updateOrderStatus(orderId, newStatus, currentStatus);
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId
@@ -143,6 +152,8 @@ export function AdminOrdersPage() {
         <div className="space-y-4">
           {orders.map((order) => {
             const isUpdating = updatingOrderId === order.id;
+            const allowedNextStatuses = ALLOWED_ORDER_TRANSITIONS[order.status];
+            const isTerminalStatus = allowedNextStatuses.length === 0;
 
             return (
               <article
@@ -180,30 +191,42 @@ export function AdminOrdersPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <label
-                      htmlFor={`status-${order.id}`}
-                      className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
-                    >
-                      Cambiar estado:
-                    </label>
-                    <select
-                      id={`status-${order.id}`}
-                      value={order.status}
-                      disabled={isUpdating}
-                      onChange={(e) =>
-                        void handleStatusChange(
-                          order.id,
-                          e.target.value as OrderStatus
-                        )
-                      }
-                      className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-900 focus:border-yellow-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                    >
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {ORDER_STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
+                    {isTerminalStatus ? (
+                      <span className="rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
+                        Orden finalizada
+                      </span>
+                    ) : (
+                      <>
+                        <label
+                          htmlFor={`status-${order.id}`}
+                          className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+                        >
+                          Avanzar estado:
+                        </label>
+                        <select
+                          id={`status-${order.id}`}
+                          value={order.status}
+                          disabled={isUpdating}
+                          onChange={(e) =>
+                            void handleStatusChange(
+                              order.id,
+                              order.status,
+                              e.target.value as OrderStatus
+                            )
+                          }
+                          className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-900 focus:border-yellow-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                        >
+                          <option value={order.status} disabled>
+                            {ORDER_STATUS_LABELS[order.status]} (actual)
+                          </option>
+                          {allowedNextStatuses.map((status) => (
+                            <option key={status} value={status}>
+                              &rarr; {ORDER_STATUS_LABELS[status]}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
 
                     <Link to={getOrderDetailPath(order.id)}>
                       <Button variant="secondary" size="sm">

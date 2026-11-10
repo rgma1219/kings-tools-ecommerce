@@ -130,14 +130,42 @@ export async function getAllOrders(
   return orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
+export const ALLOWED_ORDER_TRANSITIONS: Record<
+  OrderStatus,
+  readonly OrderStatus[]
+> = {
+  pending: ['processing', 'completed', 'cancelled'],
+  processing: ['completed'],
+  completed: [],
+  cancelled: [],
+};
+
+export function canTransitionOrderStatus(
+  currentStatus: OrderStatus,
+  nextStatus: OrderStatus
+): boolean {
+  return ALLOWED_ORDER_TRANSITIONS[currentStatus].includes(nextStatus);
+}
+
 export async function updateOrderStatus(
   orderId: string,
-  status: OrderStatus
+  nextStatus: OrderStatus,
+  currentStatus?: OrderStatus
 ): Promise<void> {
+  if (
+    currentStatus &&
+    !canTransitionOrderStatus(currentStatus, nextStatus)
+  ) {
+    throw new Error(
+      `Transición de estado no permitida (${currentStatus} -> ${nextStatus}).`
+    );
+  }
+
   const orderRef = doc(db, 'orders', orderId);
   await updateDoc(orderRef, {
-    status,
+    status: nextStatus,
     updatedAt: serverTimestamp(),
   });
 }
+
 
