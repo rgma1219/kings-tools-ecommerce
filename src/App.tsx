@@ -1,14 +1,13 @@
-import { useState } from "react";
-import { PRODUCT_CATEGORIES } from "./types";
+import { useState } from 'react';
+import { useAuth } from './contexts/auth/useAuth';
+import { useTheme } from './contexts/theme/useTheme';
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
 
 export default function App() {
-  const [isDark, setIsDark] = useState(false);
-
-  const toggleDarkPreview = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-  };
+  const { theme, toggleTheme } = useTheme();
+  const { user, loading, isAdmin, logout } = useAuth();
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100">
@@ -20,7 +19,7 @@ export default function App() {
               alt="King's Tools Logo"
               className="h-10 w-10 rounded object-contain"
               onError={(e) => {
-                e.currentTarget.src = "/images/product-placeholder.svg";
+                e.currentTarget.src = '/images/product-placeholder.svg';
               }}
             />
             <div>
@@ -28,57 +27,72 @@ export default function App() {
                 KING&apos;S <span className="text-yellow-500">TOOLS</span>
               </h1>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Ferretería Industrial y Herramientas
+                Ferretería Industrial &amp; Herramientas
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={toggleDarkPreview}
-            className="rounded-md border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-800 transition hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-          >
-            {isDark ? "Modo Claro" : "Modo Oscuro"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="cursor-pointer rounded-md border border-zinc-300 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-800 transition hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              {theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+            </button>
+
+            {user && (
+              <button
+                type="button"
+                onClick={logout}
+                disabled={loading}
+                className="cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                Cerrar sesión
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <span className="inline-block rounded bg-yellow-500/15 px-2.5 py-1 text-xs font-semibold text-yellow-600 dark:text-yellow-400">
-              Setup Inicial Verificado
-            </span>
-            <h2 className="mt-3 text-xl font-semibold">
-              Arquitectura Base y Categorías Definidas
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Categorías tipadas en TypeScript para el catálogo de King&apos;s
-              Tools:
+      <main className="mx-auto max-w-6xl px-4 py-10">
+        {loading && !user ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-yellow-500 dark:border-zinc-700 dark:border-t-yellow-500" />
+            <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+              Verificando sesión y rol de usuario...
             </p>
-            <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {PRODUCT_CATEGORIES.map((category) => (
-                <li
-                  key={category.id}
-                  className="rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium dark:border-zinc-800 dark:bg-zinc-950"
-                >
-                  {category.label}
-                </li>
-              ))}
-            </ul>
           </div>
+        ) : user ? (
+          <div className="mx-auto max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between">
+              <span className="inline-block rounded bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Sesión Activa
+              </span>
+              <span
+                className={`inline-block rounded px-2.5 py-1 text-xs font-semibold uppercase ${
+                  isAdmin
+                    ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                    : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                }`}
+              >
+                Rol: {user.role}
+              </span>
+            </div>
 
-          <div className="flex flex-col items-center justify-center rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Vista previa del Placeholder de Producto
+            <h2 className="mt-4 text-xl font-bold">{user.displayName}</h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {user.email}
             </p>
-            <img
-              src="/images/product-placeholder.png"
-              alt="Placeholder de producto"
-              className="h-48 w-48 rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
-            />
+            <p className="mt-2 font-mono text-xs text-zinc-400">
+              UID: {user.uid}
+            </p>
           </div>
-        </section>
+        ) : authView === 'login' ? (
+          <LoginPage onSwitchToRegister={() => setAuthView('register')} />
+        ) : (
+          <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
+        )}
       </main>
     </div>
   );
