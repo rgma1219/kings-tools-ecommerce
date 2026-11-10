@@ -1,13 +1,17 @@
 import {
+  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
   limit,
   orderBy,
   query,
+  serverTimestamp,
   startAfter,
   Timestamp,
+  updateDoc,
   where,
   type DocumentData,
   type DocumentSnapshot,
@@ -15,7 +19,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { CategoryId, Product } from '../types';
+import type { CategoryId, Product, ProductFormData } from '../types';
 
 const productsCollection = collection(db, 'products');
 
@@ -113,4 +117,56 @@ export async function getProductById(id: string): Promise<Product | null> {
 
   return mapToProduct(snapshot);
 }
+
+export async function listAllProducts(): Promise<Product[]> {
+  const allProductsQuery = query(
+    productsCollection,
+    orderBy('nameLower', 'asc')
+  );
+  const snapshot = await getDocs(allProductsQuery);
+  return snapshot.docs.map((docSnap) => mapToProduct(docSnap));
+}
+
+export async function createProduct(data: ProductFormData): Promise<string> {
+  const trimmedName = data.name.trim();
+
+  const docRef = await addDoc(productsCollection, {
+    name: trimmedName,
+    nameLower: trimmedName.toLowerCase(),
+    description: data.description.trim(),
+    price: Number(data.price),
+    stock: Number(data.stock),
+    categoryId: data.categoryId,
+    imageUrl: data.imageUrl.trim(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return docRef.id;
+}
+
+export async function updateProduct(
+  id: string,
+  data: ProductFormData
+): Promise<void> {
+  const trimmedName = data.name.trim();
+  const productRef = doc(db, 'products', id);
+
+  await updateDoc(productRef, {
+    name: trimmedName,
+    nameLower: trimmedName.toLowerCase(),
+    description: data.description.trim(),
+    price: Number(data.price),
+    stock: Number(data.stock),
+    categoryId: data.categoryId,
+    imageUrl: data.imageUrl.trim(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const productRef = doc(db, 'products', id);
+  await deleteDoc(productRef);
+}
+
 

@@ -98,12 +98,12 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
 export async function getUserOrders(userId: string): Promise<Order[]> {
   const userOrdersQuery = query(
     ordersCollection,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
 
   const snapshot = await getDocs(userOrdersQuery);
-  return snapshot.docs.map((docSnap) => mapToOrder(docSnap));
+  const orders = snapshot.docs.map((docSnap) => mapToOrder(docSnap));
+  return orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function getOrderById(orderId: string): Promise<Order | null> {
@@ -120,17 +120,14 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
 export async function getAllOrders(
   statusFilter?: OrderStatus | ''
 ): Promise<Order[]> {
-  const constraints: QueryConstraint[] = [];
-
-  if (statusFilter) {
-    constraints.push(where('status', '==', statusFilter));
-  }
-
-  constraints.push(orderBy('createdAt', 'desc'));
+  const constraints: QueryConstraint[] = statusFilter
+    ? [where('status', '==', statusFilter)]
+    : [orderBy('createdAt', 'desc')];
 
   const allOrdersQuery = query(ordersCollection, ...constraints);
   const snapshot = await getDocs(allOrdersQuery);
-  return snapshot.docs.map((docSnap) => mapToOrder(docSnap));
+  const orders = snapshot.docs.map((docSnap) => mapToOrder(docSnap));
+  return orders.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function updateOrderStatus(
