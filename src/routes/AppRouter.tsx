@@ -5,6 +5,7 @@ import { AdminOrdersPage } from '../pages/admin/AdminOrdersPage';
 import { AdminProductsPage } from '../pages/admin/AdminProductsPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
+import { OrderDetailPage } from '../pages/orders/OrderDetailPage';
 import { UserOrdersPage } from '../pages/orders/UserOrdersPage';
 import { CartPage } from '../pages/shop/CartPage';
 import { CatalogPage } from '../pages/shop/CatalogPage';
@@ -31,6 +32,7 @@ export function AppRouter() {
           <Route element={<ProtectedRoute />}>
             <Route path={ROUTES.CHECKOUT} element={<CheckoutPage />} />
             <Route path={ROUTES.ORDERS} element={<UserOrdersPage />} />
+            <Route path={ROUTES.ORDER_DETAIL} element={<OrderDetailPage />} />
           </Route>
         </Route>
 
