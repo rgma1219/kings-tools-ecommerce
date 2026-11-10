@@ -30,10 +30,15 @@ export function AdminOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    orderId: string;
+    nextStatus: OrderStatus;
+  } | null>(null);
 
   const fetchOrders = useCallback(async (filter: OrderStatus | '') => {
     setLoading(true);
     setError(null);
+    setPendingStatusChange(null);
     try {
       const result = await getAllOrders(filter);
       setOrders(result);
@@ -74,6 +79,7 @@ export function AdminOrdersPage() {
             : order
         )
       );
+      setPendingStatusChange(null);
       setSuccessMessage(
         `Orden #${orderId.slice(0, 8).toUpperCase()} actualizada a "${ORDER_STATUS_LABELS[newStatus]}".`
       );
@@ -154,6 +160,10 @@ export function AdminOrdersPage() {
             const isUpdating = updatingOrderId === order.id;
             const allowedNextStatuses = ALLOWED_ORDER_TRANSITIONS[order.status];
             const isTerminalStatus = allowedNextStatuses.length === 0;
+            const pendingForThisOrder =
+              pendingStatusChange?.orderId === order.id
+                ? pendingStatusChange.nextStatus
+                : null;
 
             return (
               <article
@@ -195,6 +205,42 @@ export function AdminOrdersPage() {
                       <span className="rounded-lg border border-zinc-200 bg-zinc-100 px-3 py-1.5 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
                         Orden finalizada
                       </span>
+                    ) : pendingForThisOrder ? (
+                      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-1.5">
+                        <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                          ¿Pasar a{' '}
+                          <strong>
+                            {ORDER_STATUS_LABELS[pendingForThisOrder]}
+                          </strong>
+                          ?
+                        </span>
+                        <Button
+                          variant={
+                            pendingForThisOrder === 'cancelled'
+                              ? 'danger'
+                              : 'primary'
+                          }
+                          size="sm"
+                          isLoading={isUpdating}
+                          onClick={() =>
+                            void handleStatusChange(
+                              order.id,
+                              order.status,
+                              pendingForThisOrder
+                            )
+                          }
+                        >
+                          Confirmar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isUpdating}
+                          onClick={() => setPendingStatusChange(null)}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     ) : (
                       <>
                         <label
@@ -207,13 +253,15 @@ export function AdminOrdersPage() {
                           id={`status-${order.id}`}
                           value={order.status}
                           disabled={isUpdating}
-                          onChange={(e) =>
-                            void handleStatusChange(
-                              order.id,
-                              order.status,
-                              e.target.value as OrderStatus
-                            )
-                          }
+                          onChange={(e) => {
+                            const selected = e.target.value as OrderStatus;
+                            if (selected !== order.status) {
+                              setPendingStatusChange({
+                                orderId: order.id,
+                                nextStatus: selected,
+                              });
+                            }
+                          }}
                           className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-900 focus:border-yellow-500 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                         >
                           <option value={order.status} disabled>
@@ -228,7 +276,10 @@ export function AdminOrdersPage() {
                       </>
                     )}
 
-                    <Link to={getOrderDetailPath(order.id)}>
+                    <Link
+                      to={getOrderDetailPath(order.id)}
+                      state={{ fromAdmin: true }}
+                    >
                       <Button variant="secondary" size="sm">
                         Ver comprobante
                       </Button>

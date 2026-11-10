@@ -12,9 +12,12 @@ import type { Order } from '../../types/order.types';
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const justCreated = Boolean(
-    (location.state as { justCreated?: boolean } | null)?.justCreated
-  );
+  const routeState = location.state as {
+    justCreated?: boolean;
+    fromAdmin?: boolean;
+  } | null;
+  const justCreated = Boolean(routeState?.justCreated);
+  const fromAdmin = Boolean(routeState?.fromAdmin);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -89,10 +92,11 @@ export function OrderDetailPage() {
     <section className="space-y-6">
       <div>
         <Link
-          to={ROUTES.ORDERS}
+          to={fromAdmin ? ROUTES.ADMIN_ORDERS : ROUTES.ORDERS}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
         >
-          &larr; Volver a Mis Órdenes
+          &larr;{' '}
+          {fromAdmin ? 'Volver a Gestión de Órdenes' : 'Volver a Mis Órdenes'}
         </Link>
       </div>
 
