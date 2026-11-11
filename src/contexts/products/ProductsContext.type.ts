@@ -6,14 +6,17 @@ export interface ProductsState {
   isLoading: boolean;
   error: string | null;
   cursor: ProductCursor;
+  currentPage: number;
   hasNextPage: boolean;
-  isLoadingMore: boolean;
+  hasPrevPage: boolean;
   searchText: string;
   categoryId: CategoryId | '';
 }
 
 export interface ProductsContextType extends ProductsState {
-  loadProducts: (options?: { reset?: boolean }) => Promise<void>;
+  loadProducts: (options?: { reset?: boolean; page?: number }) => Promise<void>;
+  nextPage: () => Promise<void>;
+  prevPage: () => Promise<void>;
   setSearchText: (value: string) => void;
   setCategoryId: (value: CategoryId | '') => void;
   resetFilters: () => void;

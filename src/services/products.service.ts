@@ -35,6 +35,7 @@ export interface ListProductsParams {
 export interface ListProductsResult {
   items: Product[];
   lastDoc: ProductCursor;
+  hasMore: boolean;
 }
 
 function mapToProduct(
@@ -93,18 +94,22 @@ export async function listProducts({
     constraints.push(startAfter(cursor));
   }
 
-  constraints.push(limit(pageSize));
+  // Solicitamos pageSize + 1 para saber con certeza si existe una página siguiente sin hacer una consulta extra vacía.
+  constraints.push(limit(pageSize + 1));
 
   const productsQuery = query(productsCollection, ...constraints);
   const querySnapshot = await getDocs(productsQuery);
 
-  const items = querySnapshot.docs.map((docSnap) => mapToProduct(docSnap));
-  const lastDoc =
-    querySnapshot.docs.length > 0
-      ? querySnapshot.docs[querySnapshot.docs.length - 1]
-      : null;
+  const hasMore = querySnapshot.docs.length > pageSize;
+  const pageDocs = hasMore
+    ? querySnapshot.docs.slice(0, pageSize)
+    : querySnapshot.docs;
 
-  return { items, lastDoc };
+  const items = pageDocs.map((docSnap) => mapToProduct(docSnap));
+  const lastDoc =
+    pageDocs.length > 0 ? pageDocs[pageDocs.length - 1] : null;
+
+  return { items, lastDoc, hasMore };
 }
 
 export async function getProductById(id: string): Promise<Product | null> {

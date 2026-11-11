@@ -22,15 +22,17 @@ const initialState: ProductsState = {
   isLoading: true,
   error: null,
   cursor: null,
-  hasNextPage: true,
-  isLoadingMore: false,
+  currentPage: 1,
+  hasNextPage: false,
+  hasPrevPage: false,
   searchText: '',
   categoryId: '',
 };
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ProductsState>(initialState);
-  const cursorRef = useRef<ProductCursor>(null);
+  // Almacena el cursor de inicio de cada página (índice 0 = página 1 con cursor null, índice 1 = página 2, etc.)
+  const pageCursorsRef = useRef<ProductCursor[]>([null]);
 
   const debouncedSearch = useDebounce(state.searchText, 400);
   const searchPrefix =
@@ -39,41 +41,49 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       : undefined;
 
   const loadProducts = useCallback(
-    async ({ reset = false }: { reset?: boolean } = {}) => {
-      const isFirstPage = reset || cursorRef.current === null;
-      const activeCursor = isFirstPage ? null : cursorRef.current;
+    async ({
+      reset = false,
+      page,
+    }: { reset?: boolean; page?: number } = {}) => {
+      const targetPage = reset ? 1 : (page ?? 1);
+
+      if (reset) {
+        pageCursorsRef.current = [null];
+      }
+
+      const startCursor = pageCursorsRef.current[targetPage - 1] ?? null;
 
       setState((prev) => ({
         ...prev,
-        ...(isFirstPage
-          ? { products: [], isLoading: true }
-          : { isLoadingMore: true }),
+        isLoading: true,
         error: null,
       }));
 
       try {
-        const { items, lastDoc } = await listProducts({
+        const { items, lastDoc, hasMore } = await listProducts({
           categoryId: state.categoryId || null,
           searchPrefix,
           pageSize: PAGE_SIZE,
-          cursor: activeCursor,
+          cursor: startCursor,
         });
 
-        cursorRef.current = lastDoc;
+        if (lastDoc && hasMore) {
+          pageCursorsRef.current[targetPage] = lastDoc;
+        }
 
         setState((prev) => ({
           ...prev,
-          products: isFirstPage ? items : [...prev.products, ...items],
+          products: items,
           cursor: lastDoc,
-          hasNextPage: items.length === PAGE_SIZE,
+          currentPage: targetPage,
+          hasNextPage: hasMore,
+          hasPrevPage: targetPage > 1,
           isLoading: false,
-          isLoadingMore: false,
         }));
       } catch (err: unknown) {
         setState((prev) => ({
           ...prev,
           isLoading: false,
-          isLoadingMore: false,
           error:
             err instanceof Error
               ? err.message
@@ -85,9 +95,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    cursorRef.current = null;
     void loadProducts({ reset: true });
   }, [loadProducts]);
+
+  const nextPage = useCallback(async () => {
+    if (!state.hasNextPage || state.isLoading) return;
+    await loadProducts({ page: state.currentPage + 1 });
+  }, [state.hasNextPage, state.isLoading, state.currentPage, loadProducts]);
+
+  const prevPage = useCallback(async () => {
+    if (state.currentPage <= 1 || state.isLoading) return;
+    await loadProducts({ page: state.currentPage - 1 });
+  }, [state.currentPage, state.isLoading, loadProducts]);
 
   const setSearchText = useCallback((value: string) => {
     setState((prev) => ({
@@ -115,11 +134,21 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       loadProducts,
+      nextPage,
+      prevPage,
       setSearchText,
       setCategoryId,
       resetFilters,
     }),
-    [state, loadProducts, setSearchText, setCategoryId, resetFilters]
+    [
+      state,
+      loadProducts,
+      nextPage,
+      prevPage,
+      setSearchText,
+      setCategoryId,
+      resetFilters,
+    ]
   );
 
   return (

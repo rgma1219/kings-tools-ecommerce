@@ -12,17 +12,29 @@ export function CatalogPage() {
     products,
     isLoading,
     error,
+    currentPage,
     hasNextPage,
-    isLoadingMore,
+    hasPrevPage,
     searchText,
     categoryId,
     setSearchText,
     setCategoryId,
     resetFilters,
-    loadProducts,
+    nextPage,
+    prevPage,
   } = useProducts();
 
   const { addToCart, getItemQuantity } = useCart();
+
+  const handlePrevPage = () => {
+    void prevPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNextPage = () => {
+    void nextPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <section className="space-y-6">
@@ -70,19 +82,35 @@ export function CatalogPage() {
             ))}
           </div>
 
-          {hasNextPage && (
-            <div className="flex justify-center pt-4">
-              <Button
-                variant="secondary"
-                isLoading={isLoadingMore}
-                onClick={() => void loadProducts({ reset: false })}
-              >
-                {isLoadingMore
-                  ? 'Cargando más...'
-                  : 'Cargar más herramientas'}
-              </Button>
-            </div>
-          )}
+          <nav
+            aria-label="Paginación de catálogo"
+            className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-xs dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasPrevPage || isLoading}
+              onClick={handlePrevPage}
+            >
+              ← Anterior
+            </Button>
+
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Página{' '}
+              <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                {currentPage}
+              </span>
+            </span>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!hasNextPage || isLoading}
+              onClick={handleNextPage}
+            >
+              Siguiente →
+            </Button>
+          </nav>
         </>
       )}
     </section>
