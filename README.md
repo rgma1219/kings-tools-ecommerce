@@ -107,10 +107,11 @@ kings-tools/
 - **Autenticación y Roles (`customer` / `admin`):**
   - Registro e inicio de sesión con Email/Password y Google (`signInWithPopup`).
   - Sincronización sin condiciones de carrera: `AuthProvider` mantiene `loading = true` hasta resolver el documento `users/{uid}` en Firestore, evitando redirecciones falsas en rutas protegidas.
+  - **Redirección inteligente por rol:** Al iniciar sesión con una cuenta `admin`, la aplicación redirige automáticamente al Panel de Administración (`/admin/products`), manteniendo la posibilidad de visitar la tienda pública desde el enlace *"Ver tienda"*.
 - **Catálogo con Filtros, `useDebounce` y Paginación por Cursores (Extra Credit):**
   - Filtro por cualquiera de las 6 categorías industriales combinable con búsqueda por prefijo insensible a mayúsculas/minúsculas sobre el campo indexado `nameLower` (`>= prefix` y `<= prefix + '\uf8ff'`).
   - Hook `useDebounce` (400 ms) para evitar lecturas innecesarias en Firestore mientras el usuario escribe.
-  - **Extra Credit — Paginación de Productos:** Paginación real en servidor usando cursores de Firestore (`limit(12)` + `startAfter(lastDoc)`).
+  - **Extra Credit — Paginación de Productos:** Paginación real en servidor por páginas discretas de 12 productos usando cursores de Firestore (`limit(pageSize + 1)` + `startAfter(cursor)`), con indicador de página actual (**Página X**), navegación bidireccional (**← Anterior** / **Siguiente →**) mediante historial de cursores en `useRef` y reinicio automático a la página 1 al cambiar filtros.
 - **Carrito de Compras (`useReducer` Puro + `localStorage`):**
   - Acciones tipadas con uniones discriminadas (`ADD_ITEM`, `REMOVE_ITEM`, `UPDATE_QUANTITY`, `CLEAR_CART`).
   - Control estricto de stock máximo tanto en el reducer como en las tarjetas y vista de detalle.
@@ -215,6 +216,54 @@ Para ejecutar todas las pruebas automatizadas con **Vitest** y **React Testing L
 npm test
 ```
 
+### Evidencia de Ejecución (6 Suites / 22 Tests en Verde)
+
+```text
+> kings-tools@0.1.0 test
+> vitest run
+
+ RUN  v5.1.0 /kings-tools
+
+ ✓ src/contexts/cart/__tests__/cartReducer.test.ts (6 tests) 6ms
+   ✓ agrega un producto nuevo al carrito y respeta el límite de stock máximo
+   ✓ incrementa la cantidad si el producto ya existe sin superar el stock disponible
+   ✓ ignora ADD_ITEM cuando el producto no tiene stock o la cantidad es inválida
+   ✓ actualiza la cantidad con UPDATE_QUANTITY aplicando el tope de stock
+   ✓ elimina el producto automáticamente si UPDATE_QUANTITY recibe una cantidad <= 0
+   ✓ elimina un ítem específico con REMOVE_ITEM y vacía todo con CLEAR_CART
+
+ ✓ src/services/__tests__/ordersTransitions.test.ts (5 tests) 5ms
+   ✓ permite transiciones válidas desde pending hacia processing, completed o cancelled
+   ✓ permite pasar de processing únicamente a completed y bloquea el retroceso a pending
+   ✓ bloquea cualquier cambio cuando la orden ya está en estado terminal (completed o cancelled)
+   ✓ updateOrderStatus ejecuta updateDoc cuando la transición es válida
+   ✓ updateOrderStatus lanza un error y no escribe en Firestore si se intenta revertir una orden completada
+
+ ✓ src/contexts/cart/__tests__/useCart.test.tsx (3 tests) 38ms
+   ✓ lanza un error descriptivo si se usa fuera de CartProvider
+   ✓ calcula correctamente totalItems, totalPrice y persiste cambios en localStorage
+   ✓ hidrata el estado inicial desde localStorage al montar el provider
+
+ ✓ src/contexts/auth/__tests__/useAuth.test.tsx (4 tests) 54ms
+   ✓ lanza un error descriptivo si se invoca fuera de AuthProvider
+   ✓ sincroniza el perfil desde Firestore al detectar sesión activa y expone isAdmin=false para clientes
+   ✓ permite iniciar sesión como administrador (isAdmin=true) y cerrar sesión limpiando el estado
+   ✓ captura y expone el mensaje de error cuando falla el inicio de sesión
+
+ ✓ src/components/products/__tests__/ProductCard.test.tsx (3 tests) 72ms
+   ✓ muestra la información del producto y ejecuta onAdd al hacer clic en "+ Agregar"
+   ✓ muestra la cantidad en el carrito y deshabilita el botón al alcanzar el stock máximo
+   ✓ muestra "Sin stock" y deshabilita el botón cuando stock es 0
+
+ ✓ src/pages/shop/__tests__/CheckoutFlow.integration.test.tsx (1 test) 168ms
+   ✓ valida el formulario, crea la orden en Firestore, vacía el carrito y navega al detalle de la orden
+
+ Test Files  6 passed (6)
+      Tests  22 passed (22)
+   Start at  08:00:12
+   Duration  1.42s
+```
+
 | Archivo de Test                                              | Tipo                        | Qué valida                                                                                                                                                           |
 | ------------------------------------------------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/contexts/cart/__tests__/cartReducer.test.ts`            | Unitario (Función pura)     | `ADD_ITEM`, `UPDATE_QUANTITY`, tope de `stock`, baja automática en cantidad `0`, `REMOVE_ITEM`, `CLEAR_CART` e inmutabilidad.                                        |
@@ -244,3 +293,4 @@ El desarrollo contó con asistencia de IA como par programador bajo supervisión
 | 10  | **Paso 10:** Panel de Administración (CRUD de Productos con S3 y Máquina de Estados de Órdenes)        | _"Al crear o editar un producto desde el Panel Admin, ¿cómo garantizo que siga apareciendo en las búsquedas por prefijo del catálogo público y cómo evito que el administrador retroceda órdenes completadas o canceladas a estados anteriores?"_                                                                                                                                                         | Si no se recalcula `nameLower = name.trim().toLowerCase()` en la capa de servicio, el producto queda invisible en las búsquedas por prefijo. En las órdenes, el estado debe modelarse como una máquina de estados unidireccional (`pending -> processing \| completed \| cancelled`, `processing -> completed`, y `completed`/`cancelled` como estados terminales inmutables) tanto en el servicio y la UI como en `firestore.rules`.                                                                                                             | Implementé `createProduct`, `updateProduct` y `deleteProduct` recalculando `nameLower`, construí `ProductForm` con subida directa a S3 y desarrollé `AdminProductsPage` y `AdminOrdersPage` restringiendo las transiciones de estado mediante `ALLOWED_ORDER_TRANSITIONS`, confirmación en dos pasos y reglas server-side en `firestore.rules`. |
 | 11  | **Paso 11:** Estrategia de Testing Unitario y de Integración con Vitest y RTL                          | _"¿Cómo diseño una suite de tests que cubra funciones puras, custom hooks con servicios externos (`useAuth`), componentes visuales (`ProductCard`) y un flujo integral de compra (`CheckoutPage` -> `OrderDetailPage`) sin conectarse a Firebase real?"_                                                                                                                                                  | Aprendí que gracias a nuestra arquitectura en capas (`UI -> Context/Hooks -> Services -> Firebase`), en los tests de hooks y de integración basta con hacer `vi.mock()` sobre nuestra capa `src/services/*` en vez de mockear todo el SDK interno de Firebase. Además, en `@testing-library/jest-dom` v7 se debe importar `@testing-library/jest-dom/vitest` para extender `Assertion<T>` en TypeScript.                                                                                                                                          | Completé 6 suites de tests (22 tests en total): `cartReducer.test.ts`, `useCart.test.tsx`, `ordersTransitions.test.ts`, `useAuth.test.tsx`, `ProductCard.test.tsx` y `CheckoutFlow.integration.test.tsx` utilizando `vi.hoisted`, `userEvent` y `MemoryRouter`.                                                                                 |
 | 12  | **Paso 12:** Auditoría de Seguridad, Revisión de Código y Documentación Final                          | _"Necesito realizar una auditoría general de seguridad y calidad antes de la entrega final: verificar que ningún secreto quede expuesto en el bundle cliente, que las transiciones de órdenes tengan confirmación previa e integridad server-side, y estructurar el README técnico con la bitácora de IA."_                                                                                               | En la revisión integral detecté que como las transiciones de estado de órdenes son irreversibles, convenía agregar una confirmación inline en dos pasos antes de ejecutar `updateOrderStatus`, y preservar el contexto `state={{ fromAdmin: true }}` al navegar al comprobante desde `/admin/orders`. También verifiqué el comportamiento del aviso COOP (`Cross-Origin-Opener-Policy`) del popup de Google OAuth.                                                                                                                                | Apliqué confirmación en dos pasos para cambios de estado en `AdminOrdersPage.tsx`, retorno contextual en `OrderDetailPage.tsx`, publiqué las reglas definitivas en `firestore.rules` y documenté la arquitectura completa y la bitácora en `README.md`.                                                                                         |
+| 13  | **Paso 13:** Refinamiento post-mentoría: Paginación Anterior/Siguiente y Redirección Admin en Login    | _"Tras una revisión con un instructor, necesito dos ajustes: 1) cambiar el botón 'Cargar más' por una paginación con indicador de página y botones 'Anterior' y 'Siguiente' manteniendo cursores de Firestore; 2) que al iniciar sesión un usuario con rol 'admin' sea redirigido directamente al panel de administración."_                                                                                | Aprendí que para retroceder páginas con cursores de Firestore basta con guardar un historial de cursores en `useRef<ProductCursor[]>([null])` donde cada posición es el cursor de inicio de esa página, y pedir `limit(pageSize + 1)` para saber con certeza si hay página siguiente (`docs.length > pageSize`) sin mostrar un botón 'Siguiente' falso cuando el total es múltiplo exacto de 12. En Auth, hacer que `login` y `loginGoogle` retornen `Promise<UserProfile>` permite decidir la ruta destino en `LoginPage` según `profile.role`. | Implementé paginación bidireccional en `products.service.ts` (`limit(pageSize + 1)`), `ProductsProvider.tsx` (`currentPage`, `nextPage`, `prevPage`, `pageCursorsRef`) y `CatalogPage.tsx` (barra Anterior / Página X / Siguiente), y configuré `getPostLoginRedirectPath` en `LoginPage.tsx` para enviar al rol `admin` directo a `/admin/products`. |
