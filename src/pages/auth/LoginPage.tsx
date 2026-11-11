@@ -5,6 +5,19 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../contexts/auth/useAuth';
 import { ROUTES } from '../../routes/routes';
+import type { UserRole } from '../../types';
+
+function getPostLoginRedirectPath(
+  role: UserRole,
+  fromPathname?: string
+): string {
+  if (role === 'admin') {
+    return fromPathname?.startsWith(ROUTES.ADMIN)
+      ? fromPathname
+      : ROUTES.ADMIN_PRODUCTS;
+  }
+  return fromPathname ?? ROUTES.HOME;
+}
 
 export function LoginPage() {
   const { user, login, loginGoogle, loading, error, clearError } = useAuth();
@@ -15,12 +28,17 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const fromPath =
-    (location.state as { from?: { pathname?: string } } | null)?.from
-      ?.pathname ?? ROUTES.HOME;
+  const fromPathname = (
+    location.state as { from?: { pathname?: string } } | null
+  )?.from?.pathname;
 
   if (user) {
-    return <Navigate to={fromPath} replace />;
+    return (
+      <Navigate
+        to={getPostLoginRedirectPath(user.role, fromPathname)}
+        replace
+      />
+    );
   }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -34,8 +52,10 @@ export function LoginPage() {
     }
 
     try {
-      await login(email.trim(), password);
-      navigate(fromPath, { replace: true });
+      const profile = await login(email.trim(), password);
+      navigate(getPostLoginRedirectPath(profile.role, fromPathname), {
+        replace: true,
+      });
     } catch {
       // El mensaje queda disponible en el estado error de AuthContext
     }
@@ -45,8 +65,10 @@ export function LoginPage() {
     setValidationError(null);
     clearError();
     try {
-      await loginGoogle();
-      navigate(fromPath, { replace: true });
+      const profile = await loginGoogle();
+      navigate(getPostLoginRedirectPath(profile.role, fromPathname), {
+        replace: true,
+      });
     } catch {
       // El mensaje queda disponible en el estado error de AuthContext
     }

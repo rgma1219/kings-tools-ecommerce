@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const profile = await registerWithEmail(email, password, displayName);
         setUser(profile);
+        return profile;
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : 'Error al registrar usuario.';
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await loginWithEmail(email, password);
       setUser(profile);
+      return profile;
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Error al iniciar sesión.';
@@ -90,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await loginWithGoogle();
       setUser(profile);
+      return profile;
     } catch (err: unknown) {
       const message =
         err instanceof Error

@@ -9,9 +9,9 @@ export interface AuthContextType {
     email: string,
     password: string,
     displayName: string
-  ) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  loginGoogle: () => Promise<void>;
+  ) => Promise<UserProfile>;
+  login: (email: string, password: string) => Promise<UserProfile>;
+  loginGoogle: () => Promise<UserProfile>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
